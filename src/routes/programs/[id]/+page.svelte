@@ -4,7 +4,9 @@
   import { onMount } from 'svelte';
   import { getProgram, GOAL_INFO, SPLIT_INFO, loadExercises, getExercise } from '$lib/data';
   import type { Program, ProgramPhase, ProgramSession } from '$lib/data/types';
+  import { setActiveProgram } from '$lib/utils/session-storage';
   import BackgroundFX from '$lib/components/BackgroundFX.svelte';
+  import DetectionBadge from '$lib/components/DetectionBadge.svelte';
 
   let program = $state<Program | undefined>(undefined);
   let exercisesLoaded = $state(false);
@@ -179,6 +181,7 @@
                         {#each session.exercises as ex, ei}
                           <div class="flex items-center gap-2 px-3 py-2 bg-surface/30 rounded-md border border-white/[0.03]">
                             <span class="text-[0.55rem] text-primary/60 font-mono w-4 shrink-0">{ei + 1}</span>
+                            <DetectionBadge exerciseId={ex.exerciseId} />
                             <div class="flex-1 min-w-0">
                               <span class="block text-[0.65rem] text-white/80 font-bold tracking-[0.5px] truncate">
                                 {exercisesLoaded ? getExerciseName(ex.exerciseId) : ex.exerciseId.replace(/_/g, ' ')}
@@ -229,6 +232,17 @@
           class="relative w-full py-4 bg-primary text-white font-black rounded-[14px] text-[0.95rem] tracking-[5px] uppercase cursor-pointer transition-all
             hover:bg-primary-hover active:scale-[0.97] -skew-x-[10deg]
             shadow-[0_0_25px_rgba(230,57,70,0.35)]"
+          onclick={() => {
+            if (!program) return;
+            setActiveProgram({
+              programId: program.id,
+              currentPhaseIdx: 0,
+              currentWeek: 1,
+              nextSessionIdx: 0,
+              startedAt: new Date().toISOString(),
+            });
+            goto('/session');
+          }}
         >
           <span class="inline-block skew-x-[10deg]">◆ COMMENCER</span>
         </button>

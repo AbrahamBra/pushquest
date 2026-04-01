@@ -5,6 +5,8 @@
   import { computeLevel, xpForNextLevel, canFightBoss } from '$lib/game/progression';
   import { preloadSounds } from '$lib/game/audio';
   import { initDetector } from '$lib/ai/pose-detector';
+  import { getActiveProgram } from '$lib/utils/session-storage';
+  import { getProgram } from '$lib/data';
   import BackgroundFX from '$lib/components/BackgroundFX.svelte';
   import XPBar from '$lib/components/XPBar.svelte';
   import BossCard from '$lib/components/BossCard.svelte';
@@ -14,6 +16,7 @@
 
   let totalXP = $state(0);
   let playerLevel = $derived(computeLevel(totalXP));
+  let activeProgram = $state<{ name: string } | null>(null);
   let selectedBossId = $state<string>('goblin');
   let selectedExercise = $state<string>('pushup');
   let modelStatus = $state<string>('');
@@ -39,6 +42,13 @@
     if (!data.session) {
       const saved = localStorage.getItem('pushquest_xp');
       if (saved) totalXP = parseInt(saved, 10) || 0;
+    }
+
+    // Check active program
+    const ap = getActiveProgram();
+    if (ap) {
+      const prog = getProgram(ap.programId);
+      if (prog) activeProgram = { name: prog.name };
     }
 
     preloadSounds();
@@ -75,6 +85,24 @@
   <div class="w-full mb-8" style="animation: fadeInUp 0.5s 0.3s ease-out both">
     <XPBar xp={totalXP} level={playerLevel} />
   </div>
+
+  <!-- Active Program -->
+  {#if activeProgram}
+    <div class="w-full mb-6" style="animation: fadeInUp 0.5s 0.32s ease-out both">
+      <button
+        class="w-full relative group"
+        onclick={() => goto('/session')}
+      >
+        <div class="absolute inset-0 rounded-[14px] -skew-x-[8deg]"
+          style="background: rgba(255,209,102,0.1); animation: pulseGlowGold 2.5s ease-in-out infinite;"></div>
+        <div class="relative w-full py-3.5 bg-gold/15 border-2 border-gold/40 text-gold font-black rounded-[14px] text-[0.8rem] tracking-[4px] uppercase
+          hover:bg-gold/25 active:scale-[0.97] transition-all -skew-x-[8deg]"
+          style="text-shadow: 0 0 12px rgba(255,209,102,0.5)">
+          <span class="inline-block skew-x-[8deg]">▶ CONTINUER — {activeProgram.name}</span>
+        </div>
+      </button>
+    </div>
+  {/if}
 
   <!-- Boss Selection -->
   <p class="font-mono text-[0.58rem] tracking-[5px] text-dim/80 uppercase self-start mb-2.5"
