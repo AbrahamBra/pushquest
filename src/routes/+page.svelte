@@ -6,6 +6,8 @@
   import { preloadSounds } from '$lib/game/audio';
   import { initDetector } from '$lib/ai/pose-detector';
   import { getActiveProgram } from '$lib/utils/session-storage';
+  import { loadBattleState, type SavedBattleState } from '$lib/utils/local-storage';
+  import { getBoss } from '$lib/game/bosses';
   import { getProgram } from '$lib/data';
   import BackgroundFX from '$lib/components/BackgroundFX.svelte';
   import XPBar from '$lib/components/XPBar.svelte';
@@ -17,6 +19,7 @@
   let totalXP = $state(0);
   let playerLevel = $derived(computeLevel(totalXP));
   let activeProgram = $state<{ name: string } | null>(null);
+  let savedBattle = $state<{ bossName: string; bossId: string; exerciseType: string } | null>(null);
   let selectedBossId = $state<string>('goblin');
   let selectedExercise = $state<string>('pushup');
   let modelStatus = $state<string>('');
@@ -49,6 +52,13 @@
     if (ap) {
       const prog = getProgram(ap.programId);
       if (prog) activeProgram = { name: prog.name };
+    }
+
+    // Check saved battle
+    const sb = loadBattleState();
+    if (sb) {
+      const b = getBoss(sb.bossId);
+      if (b) savedBattle = { bossName: b.name, bossId: sb.bossId, exerciseType: sb.exerciseType };
     }
 
     preloadSounds();
@@ -99,6 +109,24 @@
           hover:bg-gold/25 active:scale-[0.97] transition-all -skew-x-[8deg]"
           style="text-shadow: 0 0 12px rgba(255,209,102,0.5)">
           <span class="inline-block skew-x-[8deg]">▶ CONTINUER — {activeProgram.name}</span>
+        </div>
+      </button>
+    </div>
+  {/if}
+
+  <!-- Battle Resume -->
+  {#if savedBattle}
+    <div class="w-full mb-4" style="animation: fadeInUp 0.5s 0.33s ease-out both">
+      <button
+        class="w-full relative group"
+        onclick={() => goto(`/battle?boss=${savedBattle!.bossId}&exercise=${savedBattle!.exerciseType}&resume=true`)}
+      >
+        <div class="absolute inset-0 rounded-[14px] -skew-x-[8deg]"
+          style="background: rgba(230,57,70,0.1); animation: pulseGlow 2.5s ease-in-out infinite;"></div>
+        <div class="relative w-full py-3 bg-primary/15 border-2 border-primary/40 text-primary font-black rounded-[14px] text-[0.75rem] tracking-[3px] uppercase
+          hover:bg-primary/25 active:scale-[0.97] transition-all -skew-x-[8deg]"
+          style="text-shadow: 0 0 10px rgba(230,57,70,0.4)">
+          <span class="inline-block skew-x-[8deg]">⚔ REPRENDRE — {savedBattle.bossName}</span>
         </div>
       </button>
     </div>

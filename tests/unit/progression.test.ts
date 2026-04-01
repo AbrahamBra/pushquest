@@ -16,9 +16,9 @@ describe('computeLevel', () => {
 });
 
 describe('canFightBoss', () => {
-  it('anyone fights goblin', () => expect(canFightBoss(1, BOSSES[0])).toBe(true));
-  it('level 2 cannot fight troll', () => expect(canFightBoss(2, BOSSES[2])).toBe(false));
-  it('level 5 can fight troll', () => expect(canFightBoss(5, BOSSES[2])).toBe(true));
+  it('anyone fights goblin', () => expect(canFightBoss(1, BOSSES[0]!)).toBe(true));
+  it('level 2 cannot fight troll', () => expect(canFightBoss(2, BOSSES[2]!)).toBe(false));
+  it('level 5 can fight troll', () => expect(canFightBoss(5, BOSSES[2]!)).toBe(true));
 });
 
 describe('xpForNextLevel', () => {

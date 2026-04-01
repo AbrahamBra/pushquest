@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createBattle } from '../../src/lib/game/battle-engine';
 import { BOSSES } from '../../src/lib/game/bosses';
 
-const goblin = BOSSES[0];
+const goblin = BOSSES[0]!;
 
 describe('BattleEngine', () => {
   it('starts with full HP', () => {

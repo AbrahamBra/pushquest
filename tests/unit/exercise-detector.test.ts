@@ -39,12 +39,12 @@ function pushupUp() {
 
 describe('ExerciseDetector - push-up', () => {
   it('starts at 0 reps, up state', () => {
-    const det = createExerciseDetector(EXERCISES.pushup);
+    const det = createExerciseDetector(EXERCISES['pushup']!);
     expect(det.getReps()).toBe(0);
     expect(det.getState()).toBe('up');
   });
   it('counts a rep on down-then-up', () => {
-    const det = createExerciseDetector(EXERCISES.pushup);
+    const det = createExerciseDetector(EXERCISES['pushup']!);
     det.processFrame(pushupDown());
     expect(det.getState()).toBe('down');
     det.processFrame(pushupUp());
@@ -52,13 +52,13 @@ describe('ExerciseDetector - push-up', () => {
     expect(det.getReps()).toBe(1);
   });
   it('does not count half reps', () => {
-    const det = createExerciseDetector(EXERCISES.pushup);
+    const det = createExerciseDetector(EXERCISES['pushup']!);
     det.processFrame(pushupDown());
     det.processFrame(pushupDown());
     expect(det.getReps()).toBe(0);
   });
   it('resets correctly', () => {
-    const det = createExerciseDetector(EXERCISES.pushup);
+    const det = createExerciseDetector(EXERCISES['pushup']!);
     det.processFrame(pushupDown());
     det.processFrame(pushupUp());
     det.reset();

@@ -6,8 +6,11 @@
   import { hasDetection, getDetectionConfig } from '$lib/ai/exercises.config';
   import { createSessionEngine, type SessionEngine, type SessionState } from '$lib/game/session-engine';
   import { getActiveProgram, advanceSession, saveSessionCompletion } from '$lib/utils/session-storage';
+  import { EXERCISES } from '$lib/ai/exercises.config';
+  import { loadSessionBattleResult, clearSessionBattleResult } from '$lib/utils/session-battle-state';
   import { playSound, preloadSounds } from '$lib/game/audio';
   import BackgroundFX from '$lib/components/BackgroundFX.svelte';
+  import FormFeedback from '$lib/components/FormFeedback.svelte';
   import RestTimer from '$lib/components/RestTimer.svelte';
   import SetTracker from '$lib/components/SetTracker.svelte';
   import ManualRepInput from '$lib/components/ManualRepInput.svelte';
@@ -25,9 +28,11 @@
   // Timer interval
   let timerHandle: ReturnType<typeof setInterval> | null = null;
 
-  // AI rep counting state (for inline detection — simplified, no full camera)
+  // AI rep counting state
   let aiReps = $state(0);
   let aiTargetReps = $state(0);
+  let showFormFeedback = $state(false);
+  let lastFormScore = $state(0);
 
   function updateState(): void {
     if (engine) sessionState = engine.getState();
@@ -159,6 +164,19 @@
     engine = createSessionEngine(session, hasDetection);
     updateState();
 
+    // Check for returning from session battle
+    const battleResult = loadSessionBattleResult();
+    if (battleResult && engine) {
+      clearSessionBattleResult();
+      // Complete the current set with camera results
+      engine.completeSet(battleResult.reps, null, battleResult.formScore);
+      updateState();
+      if (battleResult.formScore !== null) {
+        lastFormScore = battleResult.formScore * 100;
+        showFormFeedback = true;
+      }
+    }
+
     // Tick for rest timer
     timerHandle = setInterval(() => {
       if (engine && sessionState?.phase === 'rest') {
@@ -284,28 +302,25 @@
 
         <!-- Input: AI or Manual -->
         {#if sessionState.inputMode === 'ai'}
-          <!-- AI mode: tap to count (simplified, without camera for MVP) -->
+          {@const detConfig = getDetectionConfig(ex.exerciseId)}
+          {@const configId = detConfig ? Object.entries(EXERCISES).find(([_, v]) => v === detConfig)?.[0] ?? 'pushup' : 'pushup'}
           <div class="flex flex-col items-center gap-3 w-full">
-            <p class="font-mono text-[0.55rem] text-gold/60 tracking-[3px] uppercase">Mode IA — Tape pour compter</p>
+            <!-- Camera launch button -->
             <button
-              class="w-32 h-32 rounded-full bg-primary/20 border-2 border-primary/60 flex items-center justify-center
-                hover:bg-primary/30 active:scale-95 transition-all"
-              style="box-shadow: 0 0 30px rgba(230,57,70,0.3); animation: pulseGlow 2.5s ease-in-out infinite"
-              onclick={addAIRep}
+              class="w-full py-4 bg-gold/15 border-2 border-gold/40 text-gold font-black rounded-[14px] text-[0.8rem] tracking-[3px] uppercase
+                hover:bg-gold/25 active:scale-[0.97] transition-all -skew-x-[8deg]"
+              style="text-shadow: 0 0 10px rgba(255,209,102,0.4)"
+              onclick={() => goto(`/session/battle?exercise=${configId}&targetReps=${aiTargetReps}`)}
             >
-              <span class="text-4xl font-black text-primary font-mono"
-                style="text-shadow: 0 0 15px rgba(230,57,70,0.6)">{aiReps}</span>
+              <span class="inline-block skew-x-[8deg]">📷 LANCER LA CAMERA</span>
             </button>
-            <p class="font-mono text-[0.5rem] text-dim/40">Cible: {aiTargetReps} reps</p>
-            {#if aiReps > 0}
-              <button
-                class="py-2 px-5 bg-surface/80 border border-primary/30 text-primary font-bold text-[0.6rem] tracking-[2px] uppercase rounded-lg
-                  hover:bg-primary/10 transition-all"
-                onclick={completeAISet}
-              >
-                VALIDER {aiReps} REPS
-              </button>
-            {/if}
+            <!-- Manual fallback -->
+            <button
+              class="text-[0.55rem] font-mono text-dim/40 tracking-[2px] hover:text-dim/60 transition-colors"
+              onclick={() => { if (engine) engine.startExercise('manual'); updateState(); }}
+            >
+              COMPTAGE MANUEL
+            </button>
           </div>
         {:else}
           <!-- Manual mode -->
@@ -368,3 +383,11 @@
     {/if}
   {/if}
 </div>
+
+<!-- Form Feedback Overlay -->
+{#if showFormFeedback}
+  <FormFeedback
+    score={lastFormScore}
+    onDismiss={() => { showFormFeedback = false; }}
+  />
+{/if}

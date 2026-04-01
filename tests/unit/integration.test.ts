@@ -7,9 +7,9 @@ import { computeLevel, canFightBoss } from '../../src/lib/game/progression';
 
 describe('Full battle flow integration', () => {
   it('simulates a complete push-up battle against goblin', () => {
-    const boss = BOSSES[0]; // Goblin, 20 HP
+    const boss = BOSSES[0]!; // Goblin, 20 HP
     const battle = createBattle(boss);
-    const detector = createExerciseDetector(EXERCISES.pushup);
+    const detector = createExerciseDetector(EXERCISES['pushup']!);
 
     // Simulate 20 push-up cycles (down + up = 1 rep each)
     for (let i = 0; i < 20; i++) {
@@ -32,7 +32,7 @@ describe('Full battle flow integration', () => {
   });
 
   it('XP from battle feeds into progression system', () => {
-    const boss = BOSSES[0];
+    const boss = BOSSES[0]!;
     const battle = createBattle(boss);
     for (let i = 0; i < 20; i++) battle.dealDamage();
 
@@ -46,11 +46,11 @@ describe('Full battle flow integration', () => {
     expect(newLevel).toBeGreaterThan(1);
 
     // Can now fight harder bosses
-    expect(canFightBoss(newLevel, BOSSES[1])).toBe(true); // Orc requires level 3
+    expect(canFightBoss(newLevel, BOSSES[1]!)).toBe(true); // Orc requires level 3
   });
 
   it('detector resets between battles', () => {
-    const detector = createExerciseDetector(EXERCISES.pushup);
+    const detector = createExerciseDetector(EXERCISES['pushup']!);
 
     // First battle
     detector.processFrame(makeDownFrame());
@@ -64,7 +64,7 @@ describe('Full battle flow integration', () => {
   });
 
   it('squat detector works independently', () => {
-    const detector = createExerciseDetector(EXERCISES.squat);
+    const detector = createExerciseDetector(EXERCISES['squat']!);
     expect(detector.getReps()).toBe(0);
     // Squat uses hip-ratio, different keypoints
     // Just verify it initializes correctly

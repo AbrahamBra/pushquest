@@ -114,6 +114,20 @@
   to   { opacity: 1; transform: scaleX(1); }
 }
 
+@keyframes shake {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-4px); }
+  50%  { transform: translateX(4px); }
+  75%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+.animate-shake { animation: shake 0.15s ease-out; }
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @keyframes orb {
   0%, 100% { transform: scale(1) translate(0, 0); }
   33%       { transform: scale(1.08) translate(12px, -8px); }
