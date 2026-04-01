@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { BattleState } from '$lib/game/battle-engine';
   import type { Boss } from '$lib/game/bosses';
+  import { shareResult, shareInvite } from '$lib/utils/share';
+  import { computeLevel } from '$lib/game/progression';
   let { state, boss, onClaim }: { state: BattleState; boss: Boss; onClaim: () => void } = $props();
+  let sharing = $state(false);
+  const playerLevel = $derived(computeLevel(parseInt(localStorage.getItem('pushquest_xp') ?? '0', 10)));
   const timeLeft = $derived(boss.timeLimitSecs - state.timeElapsedSecs);
   const fmtTime  = $derived(`${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')}`);
 </script>
@@ -67,7 +71,26 @@
       style="text-shadow: 0 0 12px rgba(255,209,102,0.5)"
       onclick={onClaim}
     >
-      <span class="inline-block skew-x-[10deg]">◆ CLAIM REWARDS ◆</span>
+      <span class="inline-block skew-x-[10deg]">◆ RECUPERER ◆</span>
+    </button>
+  </div>
+
+  <!-- Share + Invite buttons -->
+  <div class="w-full flex gap-2 mt-3" style="animation: fadeInUp 0.5s 0.6s ease-out both">
+    <button
+      class="flex-1 py-3 bg-surface/80 border border-white/[0.1] text-dim/70 font-bold text-[0.6rem] tracking-[2px] uppercase rounded-lg
+        hover:border-primary/40 hover:text-white transition-all -skew-x-3 disabled:opacity-40"
+      onclick={async () => { sharing = true; await shareResult({ boss, state, playerLevel }); sharing = false; }}
+      disabled={sharing}
+    >
+      <span class="inline-block skew-x-3">{sharing ? '...' : '📤 PARTAGER'}</span>
+    </button>
+    <button
+      class="flex-1 py-3 bg-surface/80 border border-white/[0.1] text-dim/70 font-bold text-[0.6rem] tracking-[2px] uppercase rounded-lg
+        hover:border-gold/40 hover:text-gold/70 transition-all -skew-x-3"
+      onclick={() => shareInvite()}
+    >
+      <span class="inline-block skew-x-3">👥 INVITER</span>
     </button>
   </div>
 </div>

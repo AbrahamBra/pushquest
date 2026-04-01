@@ -158,10 +158,14 @@
   {/if}
 
   <!-- Nav links -->
-  <div class="flex gap-6 mt-7" style="animation: fadeInUp 0.5s 0.9s ease-out both">
+  <div class="flex gap-4 flex-wrap justify-center mt-7" style="animation: fadeInUp 0.5s 0.9s ease-out both">
     <a href="/programs"
       class="font-mono text-[0.6rem] text-dim/60 tracking-[4px] hover:text-primary/70 transition-colors uppercase">
       ◆ PROGRAMMES ◆
+    </a>
+    <a href="/friends"
+      class="font-mono text-[0.6rem] text-dim/60 tracking-[4px] hover:text-gold/70 transition-colors uppercase">
+      ◆ AMIS ◆
     </a>
     <a href="/profile"
       class="font-mono text-[0.6rem] text-dim/60 tracking-[4px] hover:text-primary/70 transition-colors uppercase">
