@@ -6,8 +6,8 @@
   const progress = $derived(nextXP > prevXP ? ((xp - prevXP) / (nextXP - prevXP)) * 100 : 0);
 </script>
 <div class="w-full">
-  <div class="flex justify-between text-xs tracking-[2px] text-dim mb-1">
-    <span>LEVEL {level}</span>
+  <div class="flex justify-between text-xs tracking-[2px] text-dim mb-1 font-mono">
+    <span class="text-gold" style="text-shadow: 0 0 8px rgba(255,209,102,0.5)">LEVEL {level}</span>
     <span>{xp} / {nextXP} XP</span>
   </div>
   <div class="h-2 bg-white/10 rounded-full overflow-hidden">
