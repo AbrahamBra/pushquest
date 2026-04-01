@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #E63946;
+  --color-primary-hover: #C1121F;
+  --color-primary-active: #A0101A;
+  --color-gold: #FFD166;
+  --color-gold-muted: #B8943F;
+  --color-background: #08080F;
+  --color-surface: #10101A;
+  --color-surface-raised: #1A1A2E;
+  --color-dim: rgba(255,255,255,0.45);
+  --color-success: #4ADE80;
+  --color-warning: #FBBF24;
+  --font-display: 'Oswald', 'Arial Black', sans-serif;
+}
