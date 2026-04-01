@@ -1,11 +1,20 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
+  import '../app.css';
+  import { onMount } from 'svelte';
+  import { createClient } from '$lib/supabase/client';
+  import { invalidateAll } from '$app/navigation';
 
-	let { children } = $props();
+  let { data, children } = $props();
+  const supabase = createClient();
+
+  onMount(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      invalidateAll();
+    });
+    return () => subscription.unsubscribe();
+  });
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
-
-{@render children()}
+<div class="min-h-screen bg-background text-white font-sans">
+  {@render children()}
+</div>
