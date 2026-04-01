@@ -1,5 +1,5 @@
 import { angleBetween } from './geometry';
-import type { ExerciseConfig } from './exercises.config';
+import type { ExerciseConfig, SignalType } from './exercises.config';
 
 export interface Keypoint {
   name: string;
@@ -27,28 +27,90 @@ export function createExerciseDetector(config: ExerciseConfig): ExerciseDetector
     return keypoints.find(k => k.name === name && k.score >= config.minConfidence);
   }
 
-  function computeElbowAngle(kps: Keypoint[]): number | null {
-    const ls = getKp(kps, 'left_shoulder'), le = getKp(kps, 'left_elbow'), lw = getKp(kps, 'left_wrist');
-    const rs = getKp(kps, 'right_shoulder'), re = getKp(kps, 'right_elbow'), rw = getKp(kps, 'right_wrist');
+  /** Average angle from left+right side for bilateral symmetry */
+  function avgBilateral(
+    kps: Keypoint[],
+    leftNames: [string, string, string],
+    rightNames: [string, string, string]
+  ): number | null {
+    const [la, lb, lc] = leftNames.map(n => getKp(kps, n));
+    const [ra, rb, rc] = rightNames.map(n => getKp(kps, n));
     const angles: number[] = [];
-    if (ls && le && lw) angles.push(angleBetween(ls, le, lw));
-    if (rs && re && rw) angles.push(angleBetween(rs, re, rw));
+    if (la && lb && lc) angles.push(angleBetween(la, lb, lc));
+    if (ra && rb && rc) angles.push(angleBetween(ra, rb, rc));
     return angles.length ? angles.reduce((a, b) => a + b, 0) / angles.length : null;
   }
 
-  function computeHipRatio(kps: Keypoint[]): number | null {
-    const lh = getKp(kps, 'left_hip'), la = getKp(kps, 'left_ankle');
-    const rh = getKp(kps, 'right_hip'), ra = getKp(kps, 'right_ankle');
-    const ratios: number[] = [];
-    if (lh && la && la.y > 0) ratios.push(lh.y / la.y);
-    if (rh && ra && ra.y > 0) ratios.push(rh.y / ra.y);
-    if (!ratios.length) return null;
-    const avg = ratios.reduce((a, b) => a + b, 0) / ratios.length;
-    return 180 - (avg - 0.5) * 240;
+  // ─── Signal computation per type ────────────────────────
+
+  function computeElbowAngle(kps: Keypoint[]): number | null {
+    return avgBilateral(
+      kps,
+      ['left_shoulder', 'left_elbow', 'left_wrist'],
+      ['right_shoulder', 'right_elbow', 'right_wrist']
+    );
   }
 
+  function computeKneeAngle(kps: Keypoint[]): number | null {
+    return avgBilateral(
+      kps,
+      ['left_hip', 'left_knee', 'left_ankle'],
+      ['right_hip', 'right_knee', 'right_ankle']
+    );
+  }
+
+  function computeHipAngle(kps: Keypoint[]): number | null {
+    return avgBilateral(
+      kps,
+      ['left_shoulder', 'left_hip', 'left_knee'],
+      ['right_shoulder', 'right_hip', 'right_knee']
+    );
+  }
+
+  function computeShoulderAngle(kps: Keypoint[]): number | null {
+    return avgBilateral(
+      kps,
+      ['left_elbow', 'left_shoulder', 'left_hip'],
+      ['right_elbow', 'right_shoulder', 'right_hip']
+    );
+  }
+
+  function computeTorsoRatio(kps: Keypoint[]): number | null {
+    const ls = getKp(kps, 'left_shoulder'), rs = getKp(kps, 'right_shoulder');
+    const lh = getKp(kps, 'left_hip'), rh = getKp(kps, 'right_hip');
+    const la = getKp(kps, 'left_ankle'), ra = getKp(kps, 'right_ankle');
+
+    // Average shoulder Y, hip Y, ankle Y
+    const shoulders: number[] = [];
+    const hips: number[] = [];
+    const ankles: number[] = [];
+    if (ls) shoulders.push(ls.y); if (rs) shoulders.push(rs.y);
+    if (lh) hips.push(lh.y); if (rh) hips.push(rh.y);
+    if (la) ankles.push(la.y); if (ra) ankles.push(ra.y);
+
+    if (!shoulders.length || !hips.length || !ankles.length) return null;
+
+    const avgS = shoulders.reduce((a, b) => a + b, 0) / shoulders.length;
+    const avgH = hips.reduce((a, b) => a + b, 0) / hips.length;
+    const avgA = ankles.reduce((a, b) => a + b, 0) / ankles.length;
+
+    const totalHeight = avgA - avgS;
+    if (totalHeight < 10) return null; // Too small to measure
+
+    // Ratio: how "crunched" the torso is relative to full body
+    return (avgH - avgS) / totalHeight;
+  }
+
+  const SIGNAL_FN: Record<SignalType, (kps: Keypoint[]) => number | null> = {
+    'elbow-angle': computeElbowAngle,
+    'knee-angle': computeKneeAngle,
+    'hip-angle': computeHipAngle,
+    'shoulder-angle': computeShoulderAngle,
+    'torso-ratio': computeTorsoRatio,
+  };
+
   function computeSignal(kps: Keypoint[]): number | null {
-    return config.signalType === 'elbow-angle' ? computeElbowAngle(kps) : computeHipRatio(kps);
+    return SIGNAL_FN[config.signalType](kps);
   }
 
   return {
@@ -56,12 +118,18 @@ export function createExerciseDetector(config: ExerciseConfig): ExerciseDetector
       const signal = computeSignal(keypoints);
       if (signal === null) return;
       lastSignal = signal;
+
       if (state === 'up' && signal < config.downThreshold) {
         state = 'down';
       } else if (state === 'down' && signal > config.upThreshold) {
         state = 'up';
         reps++;
-        formScoreSum += Math.min(1, Math.max(0, (config.upThreshold - signal) / (config.upThreshold - config.downThreshold) + 0.5));
+        // Form score: how deep did they go relative to thresholds
+        const range = config.upThreshold - config.downThreshold;
+        const depth = range > 0
+          ? Math.min(1, Math.max(0, (config.upThreshold - signal) / range + 0.5))
+          : 0.5;
+        formScoreSum += depth;
       }
     },
     getReps: () => reps,

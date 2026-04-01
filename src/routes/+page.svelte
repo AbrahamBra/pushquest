@@ -129,10 +129,15 @@
       style="animation: systemBoot 0.5s ease-out both">{modelStatus}</p>
   {/if}
 
-  <!-- Profile link -->
-  <a href="/profile"
-    class="mt-7 font-mono text-[0.6rem] text-dim/60 tracking-[4px] hover:text-primary/70 transition-colors uppercase"
-    style="animation: fadeInUp 0.5s 0.9s ease-out both">
-    ◆ PROFILE ◆
-  </a>
+  <!-- Nav links -->
+  <div class="flex gap-6 mt-7" style="animation: fadeInUp 0.5s 0.9s ease-out both">
+    <a href="/programs"
+      class="font-mono text-[0.6rem] text-dim/60 tracking-[4px] hover:text-primary/70 transition-colors uppercase">
+      ◆ PROGRAMMES ◆
+    </a>
+    <a href="/profile"
+      class="font-mono text-[0.6rem] text-dim/60 tracking-[4px] hover:text-primary/70 transition-colors uppercase">
+      ◆ PROFILE ◆
+    </a>
+  </div>
 </div>
