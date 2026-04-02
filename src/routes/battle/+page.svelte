@@ -5,7 +5,7 @@
   import { getBoss, type Boss } from '$lib/game/bosses';
   import { createBattle, type BattleState, type Battle } from '$lib/game/battle-engine';
   import { EXERCISES, type ExerciseConfig } from '$lib/ai/exercises.config';
-  import { playSound, preloadSounds } from '$lib/game/audio';
+  import { playSound, playSoundPitched, preloadSounds, vibrate } from '$lib/game/audio';
   import { computeLevel } from '$lib/game/progression';
   import { onVisibilityChange } from '$lib/utils/visibility';
   import { saveBattleState, loadBattleState, clearBattleState } from '$lib/utils/local-storage';
@@ -48,6 +48,40 @@
   let cameraActive = $state(false);
   let levelBefore = 0;
 
+  // === JUICE SYSTEMS ===
+
+  // Hit stop (freeze frame)
+  let hitStopped = $state(false);
+
+  // Combo system
+  let comboCount = $state(0);
+  let lastRepTime = 0;
+  const COMBO_WINDOW_MS = 3000; // 3s between reps to keep combo
+  const comboTier = $derived(
+    comboCount >= 15 ? 4 : comboCount >= 10 ? 3 : comboCount >= 5 ? 2 : comboCount >= 3 ? 1 : 0
+  );
+  const comboLabel = $derived(
+    comboTier === 4 ? 'LEGENDARY' : comboTier === 3 ? 'UNSTOPPABLE' : comboTier === 2 ? 'ON FIRE' : comboTier === 1 ? 'COMBO' : ''
+  );
+  const comboColor = $derived(
+    comboTier >= 3 ? 'text-gold' : comboTier === 2 ? 'text-orange-400' : 'text-primary'
+  );
+
+  // Damage numbers
+  let damagePopups: Array<{ id: number; x: number; y: number; value: string; color: string }> = $state([]);
+  let popupId = 0;
+
+  // Mid-combat messages
+  let battleMessage = $state('');
+  let battleMessageTimer: ReturnType<typeof setTimeout> | null = null;
+  let shownMessages = new Set<string>();
+
+  // Boss intro
+  let showBossIntro = $state(false);
+
+  // Damage flash overlay
+  let showDamageFlash = $state(false);
+
   // Boss sprite
   const bossSprite = $derived(getBossSprite(bossId));
   let bossAnim: AnimationType = $state('idle');
@@ -84,28 +118,90 @@
     if (battle) battleState = battle.getState();
   }
 
+  // --- Juice helpers ---
+  function showBattleMsg(msg: string, durationMs: number = 1500): void {
+    battleMessage = msg;
+    if (battleMessageTimer) clearTimeout(battleMessageTimer);
+    battleMessageTimer = setTimeout(() => { battleMessage = ''; }, durationMs);
+  }
+
+  function spawnDamageNumber(value: string, color: string = 'text-gold'): void {
+    const x = 40 + Math.random() * 20; // 40-60% horizontal
+    const y = 20 + Math.random() * 10; // 20-30% vertical
+    const id = popupId++;
+    damagePopups = [...damagePopups, { id, x, y, value, color }];
+    setTimeout(() => {
+      damagePopups = damagePopups.filter(p => p.id !== id);
+    }, 800);
+  }
+
+  function checkMilestoneMessages(): void {
+    const pct = battleState.bossHP / battleState.bossMaxHP;
+    if (pct <= 0.1 && pct > 0 && !shownMessages.has('10')) {
+      shownMessages.add('10');
+      showBattleMsg('FINISH HIM!', 2000);
+    } else if (pct <= 0.25 && !shownMessages.has('25')) {
+      shownMessages.add('25');
+      showBattleMsg('IL FAIBLIT!', 1500);
+    } else if (pct <= 0.5 && !shownMessages.has('50')) {
+      shownMessages.add('50');
+      showBattleMsg('MI-COMBAT — TIENS BON!', 1500);
+    }
+  }
+
   // --- Camera callbacks ---
   function handleRep(): void {
-    if (!battle || !cameraActive) return;
+    if (!battle || !cameraActive || hitStopped) return;
     battle.dealDamage();
     updateBattleState();
     currentReps = battleState.reps;
-    playSound('rep');
 
-    // Boss hurt animation
+    // 1. Pitched sound (variety)
+    playSoundPitched('rep', [0.85, 1.15]);
+
+    // 2. Haptic feedback (Android)
+    vibrate(comboTier >= 2 ? [30, 20, 30] : 40);
+
+    // 3. Hit stop — freeze 50ms
+    hitStopped = true;
+    setTimeout(() => { hitStopped = false; }, 50);
+
+    // 4. Boss hurt animation
     playBossAnim('hurt', 400);
 
-    // Screen shake
+    // 5. Screen shake — intensity scales with combo
     shaking = true;
-    setTimeout(() => { shaking = false; }, 150);
+    setTimeout(() => { shaking = false; }, comboTier >= 2 ? 200 : 150);
 
-    // Rep pop
+    // 6. Damage flash
+    showDamageFlash = true;
+    setTimeout(() => { showDamageFlash = false; }, 100);
+
+    // 7. Combo system
+    const now = Date.now();
+    if (now - lastRepTime < COMBO_WINDOW_MS) {
+      comboCount++;
+    } else {
+      comboCount = 1;
+    }
+    lastRepTime = now;
+
+    // 8. Damage number popup
+    const isCritical = comboTier >= 2;
+    const dmgValue = isCritical ? `-${1 + comboTier}` : '-1';
+    spawnDamageNumber(dmgValue, isCritical ? 'text-gold' : 'text-white');
+
+    // 9. Rep pop
     showRepCounter = true;
     if (repPopTimer) clearTimeout(repPopTimer);
     repPopTimer = setTimeout(() => { showRepCounter = false; }, 750);
 
+    // 10. Milestone messages
+    checkMilestoneMessages();
+
     if (battleState.result === 'victory') {
       bossAnim = 'death';
+      showBattleMsg('VICTOIRE!', 3000);
       endBattle('victory');
     }
   }
@@ -118,11 +214,10 @@
     isLoading = false;
     levelBefore = computeLevel(parseInt(localStorage.getItem('pushquest_xp') ?? '0', 10));
 
-    // Resume: skip countdown
+    // Resume: skip intro + countdown
     if (isResume) {
       const saved = loadBattleState();
       if (saved && saved.bossId === bossId) {
-        // Restore state
         for (let i = 0; i < saved.reps; i++) battle?.dealDamage();
         updateBattleState();
         currentReps = saved.reps;
@@ -134,17 +229,23 @@
       }
     }
 
-    // Normal: 3-2-1 countdown
-    countdown = 3;
-    const countdownInterval = setInterval(() => {
-      countdown--;
-      playSound('countdown');
-      if (countdown <= 0) {
-        clearInterval(countdownInterval);
-        cameraActive = true;
-        startTimer();
-      }
-    }, 1000);
+    // Boss intro (2s) → then countdown
+    showBossIntro = true;
+    setTimeout(() => {
+      showBossIntro = false;
+
+      // 3-2-1 countdown
+      countdown = 3;
+      const countdownInterval = setInterval(() => {
+        countdown--;
+        playSound('countdown');
+        if (countdown <= 0) {
+          clearInterval(countdownInterval);
+          cameraActive = true;
+          startTimer();
+        }
+      }, 1000);
+    }, 2000);
   }
 
   function handleCameraError(msg: string): void {
@@ -233,6 +334,7 @@
     if (repPopTimer) { clearTimeout(repPopTimer); repPopTimer = null; }
     if (bossAttackHandle) { clearInterval(bossAttackHandle); bossAttackHandle = null; }
     if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+    if (battleMessageTimer) { clearTimeout(battleMessageTimer); battleMessageTimer = null; }
   }
 
   onMount(() => {
