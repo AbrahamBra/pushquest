@@ -22,6 +22,8 @@ export function createExerciseDetector(config: ExerciseConfig): ExerciseDetector
   let reps = 0;
   let lastSignal = 0;
   let formScoreSum = 0;
+  let lastRepTime = 0;
+  const MIN_REP_INTERVAL_MS = 300; // anti-spam: minimum 300ms between reps
 
   function getKp(keypoints: Keypoint[], name: string): Keypoint | undefined {
     return keypoints.find(k => k.name === name && k.score >= config.minConfidence);
@@ -122,8 +124,11 @@ export function createExerciseDetector(config: ExerciseConfig): ExerciseDetector
       if (state === 'up' && signal < config.downThreshold) {
         state = 'down';
       } else if (state === 'down' && signal > config.upThreshold) {
+        const now = Date.now();
+        if (now - lastRepTime < MIN_REP_INTERVAL_MS) return; // anti-spam guard
         state = 'up';
         reps++;
+        lastRepTime = now;
         // Form score: how deep did they go relative to thresholds
         const range = config.upThreshold - config.downThreshold;
         const depth = range > 0
@@ -136,6 +141,6 @@ export function createExerciseDetector(config: ExerciseConfig): ExerciseDetector
     getState: () => state,
     getFormScore: () => reps > 0 ? formScoreSum / reps : 0,
     getSignalValue: () => lastSignal,
-    reset() { state = 'up'; reps = 0; lastSignal = 0; formScoreSum = 0; },
+    reset() { state = 'up'; reps = 0; lastSignal = 0; formScoreSum = 0; lastRepTime = 0; },
   };
 }

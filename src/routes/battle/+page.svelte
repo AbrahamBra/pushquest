@@ -312,6 +312,7 @@
     <div class="absolute left-5 right-5 z-10 flex flex-col gap-2.5"
       style="bottom: calc(36px + var(--safe-bottom, 0px))">
       <FormScoreBar value={formScore} />
+      <p class="text-[0.45rem] text-dim/30 font-mono text-center tracking-[0.5px]">Detection approximative — ajuste tes reps si besoin</p>
       <div class="flex gap-2.5">
         <button class="flex-1 py-3.5 bg-black/50 border-[1.5px] border-white/[0.18] text-white font-bold text-xs tracking-[3px] uppercase rounded-[12px] cursor-pointer backdrop-blur-md"
           onclick={pauseGame}>PAUSE</button>

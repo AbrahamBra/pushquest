@@ -112,12 +112,12 @@ export const EXERCISES: Record<string, ExerciseConfig> = {
   squat: {
     id: 'squat',
     name: 'Squats',
-    downThreshold: 100,
+    downThreshold: 85,     // ~parallel (was 100 = quarter squat)
     upThreshold: 155,
     minConfidence: 0.35,
     signalType: 'knee-angle',
     formCues: {
-      depthWarning: 'Plus profond - cuisses paralleles',
+      depthWarning: 'Plus profond — cuisses paralleles',
       symmetryWarning: 'Equilibre les deux cotes',
     },
   },
@@ -125,7 +125,7 @@ export const EXERCISES: Record<string, ExerciseConfig> = {
   'jump-squat': {
     id: 'jump-squat',
     name: 'Jump Squats',
-    downThreshold: 105,
+    downThreshold: 95,     // slightly less deep than squat (was 105)
     upThreshold: 155,
     minConfidence: 0.3,
     signalType: 'knee-angle',
@@ -137,7 +137,7 @@ export const EXERCISES: Record<string, ExerciseConfig> = {
   lunge: {
     id: 'lunge',
     name: 'Lunges',
-    downThreshold: 95,
+    downThreshold: 90,     // knee at ~90 degrees (was 95)
     upThreshold: 155,
     minConfidence: 0.3,
     signalType: 'knee-angle',
@@ -149,7 +149,7 @@ export const EXERCISES: Record<string, ExerciseConfig> = {
   'bench-jump': {
     id: 'bench-jump',
     name: 'Bench Jump',
-    downThreshold: 110,
+    downThreshold: 100,    // less depth needed for explosive (was 110)
     upThreshold: 160,
     minConfidence: 0.3,
     signalType: 'knee-angle',
@@ -240,62 +240,11 @@ export const EXERCISES: Record<string, ExerciseConfig> = {
   },
 
   // ═══════════════════════════════════════════
-  // ABS (torso-ratio based)
+  // ABS — REMOVED from AI detection
+  // torso-ratio signal is unreliable with MoveNet 2D keypoints
+  // (floor exercises = poor keypoint accuracy, thresholds not validated)
+  // All abs exercises use manual rep counting instead.
   // ═══════════════════════════════════════════
-
-  'air-bike': {
-    id: 'air-bike',
-    name: 'Air Bike',
-    downThreshold: 0.6,   // Torso crunched
-    upThreshold: 0.85,    // Torso extended
-    minConfidence: 0.3,
-    signalType: 'torso-ratio',
-  },
-
-  'flutter-kicks': {
-    id: 'flutter-kicks',
-    name: 'Flutter Kicks',
-    downThreshold: 0.55,
-    upThreshold: 0.8,
-    minConfidence: 0.3,
-    signalType: 'torso-ratio',
-  },
-
-  crunch: {
-    id: 'crunch',
-    name: 'Crunches',
-    downThreshold: 0.6,
-    upThreshold: 0.85,
-    minConfidence: 0.3,
-    signalType: 'torso-ratio',
-  },
-
-  'heel-touchers': {
-    id: 'heel-touchers',
-    name: 'Alternate Heel Touchers',
-    downThreshold: 0.6,
-    upThreshold: 0.82,
-    minConfidence: 0.3,
-    signalType: 'torso-ratio',
-  },
-
-  'bottoms-up': {
-    id: 'bottoms-up',
-    name: 'Bottoms Up',
-    downThreshold: 0.55,
-    upThreshold: 0.85,
-    minConfidence: 0.3,
-    signalType: 'torso-ratio',
-  },
-
-  'bent-knee-hip-raise': {
-    id: 'bent-knee-hip-raise',
-    name: 'Bent-Knee Hip Raise',
-    downThreshold: 0.55,
-    upThreshold: 0.85,
-    minConfidence: 0.3,
-    signalType: 'torso-ratio',
-  },
 };
 
 /**
@@ -341,14 +290,7 @@ export const EXERCISE_DETECTION_MAP: Record<string, string> = {
   'Barbell_Glute_Bridge': 'glute-bridge',
   'Glute_Kickback': 'glute-kickback',
 
-  // Abs
-  'Air_Bike': 'air-bike',
-  'Flutter_Kicks': 'flutter-kicks',
-  'Alternate_Heel_Touchers': 'heel-touchers',
-  'Bottoms_Up': 'bottoms-up',
-  'Bent-Knee_Hip_Raise': 'bent-knee-hip-raise',
-  '3_4_Sit-Up': 'crunch',
-  'Ab_Crunch_Machine': 'crunch',
+  // Abs — manual logging only (torso-ratio unreliable)
 };
 
 /** Check if an exercise from free-exercise-db has AI detection support */

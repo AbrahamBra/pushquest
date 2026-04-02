@@ -11,8 +11,14 @@ describe('Full battle flow integration', () => {
     const battle = createBattle(boss);
     const detector = createExerciseDetector(EXERCISES['pushup']!);
 
+    // Mock time to advance 500ms between each rep (bypass 300ms anti-spam)
+    let fakeTime = 1000;
+    const origDateNow = Date.now;
+    Date.now = () => fakeTime;
+
     // Simulate 20 push-up cycles (down + up = 1 rep each)
     for (let i = 0; i < 20; i++) {
+      fakeTime += 500; // 500ms between reps
       // Simulate "down" frame
       detector.processFrame(makeDownFrame());
       // Simulate "up" frame
@@ -23,6 +29,8 @@ describe('Full battle flow integration', () => {
         battle.dealDamage();
       }
     }
+
+    Date.now = origDateNow; // restore
 
     const state = battle.getState();
     expect(state.result).toBe('victory');

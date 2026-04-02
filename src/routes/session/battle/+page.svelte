@@ -117,6 +117,7 @@
   <div class="absolute left-5 right-5 z-10 flex flex-col gap-2"
     style="bottom: calc(36px + var(--safe-bottom, 0px))">
     <FormScoreBar value={formScore} />
+    <p class="text-[0.45rem] text-dim/30 font-mono text-center tracking-[0.5px]">Detection approximative — ajuste tes reps si besoin</p>
     <button class="w-full py-3.5 bg-black/50 border-[1.5px] border-primary/60 text-primary font-bold text-xs tracking-[3px] uppercase rounded-[12px] backdrop-blur-md"
       onclick={cancelBattle}>TERMINER</button>
   </div>
