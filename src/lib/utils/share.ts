@@ -165,7 +165,7 @@ export async function shareResult(params: {
   const isVictory = state.result === 'victory';
 
   const text = isVictory
-    ? `Je viens de vaincre ${boss.name} sur PushQuest ! ${state.reps} reps, +${state.xpEarned} XP 💪`
+    ? `Je viens de vaincre ${boss.name} en ${state.reps} reps sur PushQuest ! Ose me defier 💀`
     : `J'ai inflige ${Math.round((state.damageDealt / state.bossMaxHP) * 100)}% de degats a ${boss.name} sur PushQuest ! Prochaine fois c'est la bonne ⚔️`;
 
   try {
