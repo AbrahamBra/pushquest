@@ -9,7 +9,9 @@
   import { computeLevel } from '$lib/game/progression';
   import { onVisibilityChange } from '$lib/utils/visibility';
   import { saveBattleState, loadBattleState, clearBattleState } from '$lib/utils/local-storage';
+  import { getBossSprite, type AnimationType } from '$lib/game/sprite-config';
   import CameraDetection from '$lib/components/CameraDetection.svelte';
+  import SpriteAnimator from '$lib/components/SpriteAnimator.svelte';
   import HPBar from '$lib/components/HPBar.svelte';
   import RepCounter from '$lib/components/RepCounter.svelte';
   import FormScoreBar from '$lib/components/FormScoreBar.svelte';
@@ -46,6 +48,20 @@
   let cameraActive = $state(false);
   let levelBefore = 0;
 
+  // Boss sprite
+  const bossSprite = $derived(getBossSprite(bossId));
+  let bossAnim: AnimationType = $state('idle');
+  let animTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function playBossAnim(anim: AnimationType, durationMs: number = 600): void {
+    bossAnim = anim;
+    if (animTimer) clearTimeout(animTimer);
+    animTimer = setTimeout(() => { bossAnim = 'idle'; }, durationMs);
+  }
+
+  // Random boss attack (every 8-15s)
+  let bossAttackHandle: ReturnType<typeof setInterval> | null = null;
+
   // Handles
   let timerHandle: ReturnType<typeof setInterval> | null = null;
   let saveHandle: ReturnType<typeof setInterval> | null = null;
@@ -76,6 +92,9 @@
     currentReps = battleState.reps;
     playSound('rep');
 
+    // Boss hurt animation
+    playBossAnim('hurt', 400);
+
     // Screen shake
     shaking = true;
     setTimeout(() => { shaking = false; }, 150);
@@ -85,7 +104,10 @@
     if (repPopTimer) clearTimeout(repPopTimer);
     repPopTimer = setTimeout(() => { showRepCounter = false; }, 750);
 
-    if (battleState.result === 'victory') endBattle('victory');
+    if (battleState.result === 'victory') {
+      bossAnim = 'death';
+      endBattle('victory');
+    }
   }
 
   function handleFormUpdate(score: number): void {
@@ -139,6 +161,12 @@
       if (secsLeft <= 30 && secsLeft > 0) playSound('warning');
       if (secsLeft <= 0) endBattle('defeat');
     }, 1000);
+
+    // Random boss attacks (visual only, every 8-15s)
+    bossAttackHandle = setInterval(() => {
+      if (isPaused || !cameraActive || battleState.result !== 'active') return;
+      playBossAnim('attack', 800);
+    }, 8000 + Math.random() * 7000);
 
     // Auto-save
     saveHandle = setInterval(() => {
@@ -203,6 +231,8 @@
     if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
     if (saveHandle) { clearInterval(saveHandle); saveHandle = null; }
     if (repPopTimer) { clearTimeout(repPopTimer); repPopTimer = null; }
+    if (bossAttackHandle) { clearInterval(bossAttackHandle); bossAttackHandle = null; }
+    if (animTimer) { clearTimeout(animTimer); animTimer = null; }
   }
 
   onMount(() => {
@@ -232,6 +262,21 @@
     onReady={handleCameraReady}
     onError={handleCameraError}
   />
+
+  <!-- Boss Sprite -->
+  {#if bossSprite && isActive && !isLoading && countdown <= 0}
+    <div class="absolute top-[15%] left-1/2 -translate-x-1/2 z-[3] flex items-center justify-center
+      {bossAnim === 'hurt' ? 'brightness-200' : ''}
+      {bossAnim === 'death' ? 'opacity-80' : ''}"
+      style="filter: drop-shadow(0 0 20px rgba(230,57,70,0.4)) drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+             transition: filter 0.15s ease-out;">
+      <SpriteAnimator
+        sprite={bossSprite}
+        animation={bossAnim}
+        class="max-h-[35vh]"
+      />
+    </div>
+  {/if}
 
   <!-- Gradient overlays -->
   <div class="absolute top-0 left-0 right-0 h-[200px] bg-gradient-to-b from-black/[0.88] to-transparent pointer-events-none z-[2]"></div>

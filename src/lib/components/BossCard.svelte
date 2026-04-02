@@ -1,5 +1,8 @@
 <script lang="ts">
   import type { Boss } from '$lib/game/bosses';
+  import { getBossSprite } from '$lib/game/sprite-config';
+  import SpriteAnimator from '$lib/components/SpriteAnimator.svelte';
+
   let { boss, selected, locked, onclick }: {
     boss: Boss; selected: boolean; locked: boolean; onclick: () => void;
   } = $props();
@@ -7,6 +10,8 @@
   const meta = $derived(
     `${boss.difficulty.charAt(0).toUpperCase() + boss.difficulty.slice(1)}  ·  ${boss.hp} reps  ·  ${Math.floor(boss.timeLimitSecs / 60)} min`
   );
+
+  const sprite = $derived(getBossSprite(boss.id));
 </script>
 
 <button
@@ -36,7 +41,15 @@
     {/if}
 
     <div class="skew-x-[12deg] flex items-center justify-between px-4 py-3.5">
-      <div class="flex flex-col gap-1">
+      <!-- Sprite thumbnail -->
+      {#if sprite && !locked}
+        <div class="w-12 h-12 flex-shrink-0 mr-3 flex items-center justify-center overflow-hidden"
+          style="filter: drop-shadow(0 0 6px rgba(230,57,70,0.3));">
+          <SpriteAnimator {sprite} animation="idle" class="max-w-full max-h-full" />
+        </div>
+      {/if}
+
+      <div class="flex flex-col gap-1 flex-1">
         <!-- Status dot + name -->
         <div class="flex items-center gap-2">
           {#if selected}
