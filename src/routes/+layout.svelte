@@ -8,6 +8,7 @@
   import { syncOnLogin } from '$lib/supabase/sync';
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import TabBar from '$lib/components/TabBar.svelte';
+  import ChallengeToast from '$lib/components/ChallengeToast.svelte';
   import { init as initChallengeStore, reset as resetChallengeStore } from '$lib/stores/challenges';
 
   let { data, children } = $props();
@@ -45,6 +46,9 @@
   {/key}
 </div>
 
-{#if showTabBar}<TabBar />{/if}
+{#if showTabBar}
+  <TabBar />
+  <ChallengeToast />
+{/if}
 
 <InstallPrompt />
