@@ -19,6 +19,7 @@
   import DiamondIcon from '$lib/components/icons/DiamondIcon.svelte';
   import SwordIcon from '$lib/components/icons/SwordIcon.svelte';
   import PlayIcon from '$lib/components/icons/PlayIcon.svelte';
+  import MultiplayerCTA from '$lib/components/MultiplayerCTA.svelte';
 
   let { data } = $props();
 
@@ -32,6 +33,8 @@
   let visible = $state(false);
   let streak = $state(0);
   let daily = $state<{ bossId: string; exerciseId: string; bossName: string; exerciseName: string } | null>(null);
+  let dailyCompleted = $state(false);
+  let countdownText = $state('');
 
   function isBossLocked(boss: Boss): boolean {
     return !canFightBoss(playerLevel, boss);
@@ -81,11 +84,36 @@
       daily = { bossId: dc.bossId, exerciseId: dc.exerciseId, bossName: dcBoss.name, exerciseName: dcExercise.name };
     }
 
+    // Check daily completion
+    const dailyCheck = localStorage.getItem('pushquest_daily_completed');
+    if (dailyCheck) {
+      try {
+        const parsed = JSON.parse(dailyCheck);
+        const today = new Date().toISOString().split('T')[0];
+        if (parsed.date === today) dailyCompleted = true;
+      } catch {}
+    }
+
+    // Countdown timer
+    function updateCountdown() {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      countdownText = `${h}h ${m.toString().padStart(2, '0')}m`;
+    }
+    updateCountdown();
+    const countdownInterval = setInterval(updateCountdown, 60000);
+
     preloadSounds();
     initDetector((msg) => { modelStatus = msg; }).catch(() => { modelStatus = ''; });
 
     // Trigger entrance
     requestAnimationFrame(() => { visible = true; });
+
+    return () => { clearInterval(countdownInterval); };
   });
 </script>
 
@@ -116,30 +144,53 @@
     <XPBar xp={totalXP} level={playerLevel} />
   </div>
 
-  <!-- Streak + Daily Challenge -->
-  <div class="w-full flex gap-2.5 mb-6" style="animation: fadeInUp 0.5s 0.31s ease-out both">
-    <!-- Streak -->
+  <!-- MISSION QUOTIDIENNE -->
+  {#if daily}
+    <div class="w-full mb-4" style="animation: fadeInUp 0.5s 0.31s ease-out both">
+      <button
+        class="w-full relative overflow-hidden rounded-xl px-4 py-4 text-left transition-all
+          {dailyCompleted ? 'bg-surface/70 border-2 border-green-500/30' : 'bg-surface/70 border-2 border-gold/30 hover:border-gold/50'}"
+        style={dailyCompleted ? '' : 'animation: missionGlow 2s ease-in-out infinite'}
+        onclick={() => goto(`/battle?boss=${daily!.bossId}&exercise=${daily!.exerciseId}`)}
+        disabled={dailyCompleted}
+      >
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="font-mono text-[0.55rem] tracking-[3px] uppercase
+            {dailyCompleted ? 'text-green-400/70' : 'text-gold/70'}">
+            {dailyCompleted ? '✓ MISSION ACCOMPLIE' : '⚡ MISSION QUOTIDIENNE'}
+          </span>
+          {#if !dailyCompleted}
+            <span class="font-mono text-[0.5rem] tracking-[1px] text-dim/40">
+              ⏱ {countdownText}
+            </span>
+          {/if}
+        </div>
+        <span class="block text-[0.85rem] font-black tracking-[2px] uppercase
+          {dailyCompleted ? 'text-green-400/60' : 'text-white/90'}"
+          style={dailyCompleted ? '' : 'text-shadow: 0 0 10px rgba(255,209,102,0.3)'}>
+          {daily.bossName} · {daily.exerciseName}
+        </span>
+      </button>
+    </div>
+  {/if}
+
+  <!-- Streak -->
+  <div class="w-full flex gap-2.5 mb-6" style="animation: fadeInUp 0.5s 0.32s ease-out both">
     <div class="flex-1 bg-surface/70 border border-white/[0.06] rounded-lg px-3 py-3 -skew-x-3">
       <div class="skew-x-3 text-center">
         <span class="block text-2xl font-black font-mono {streak > 0 ? 'text-gold' : 'text-dim/40'}"
           style="{streak > 0 ? 'text-shadow: 0 0 12px color-mix(in srgb, var(--color-gold) 50%, transparent)' : ''}"
-        >{streak > 0 ? '🔥' : '—'} {streak}</span>
+        >{streak > 0 ? '🔥' : '💀'} {streak}</span>
         <span class="text-[0.5rem] text-dim/50 font-mono tracking-[2px] uppercase">
-          {streak === 1 ? 'jour' : 'jours'}
+          {streak === 0 ? 'Rallume la flamme' : streak === 1 ? 'jour' : 'jours'}
         </span>
       </div>
     </div>
-    <!-- Daily Challenge -->
-    {#if daily}
-      <button class="flex-[2] bg-surface/70 border border-gold/20 rounded-lg px-3 py-3 -skew-x-3 hover:border-gold/40 transition-all"
-        onclick={() => goto(`/battle?boss=${daily!.bossId}&exercise=${daily!.exerciseId}`)}>
-        <div class="skew-x-3 text-left">
-          <span class="block text-[0.5rem] font-mono tracking-[3px] text-gold/60 uppercase mb-0.5">Defi du jour</span>
-          <span class="block text-[0.7rem] font-bold text-white/90 tracking-[1px]">{daily.bossName} · {daily.exerciseName}</span>
-        </div>
-      </button>
-    {/if}
   </div>
+
+  {#if !data.session}
+    <MultiplayerCTA />
+  {/if}
 
   <!-- Active Program -->
   {#if activeProgram}
@@ -231,3 +282,10 @@
   {/if}
 
 </div>
+
+<style>
+  @keyframes missionGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(255,209,102,0.1), inset 0 0 15px rgba(255,209,102,0.03); }
+    50% { box-shadow: 0 0 25px rgba(255,209,102,0.2), inset 0 0 25px rgba(255,209,102,0.06); }
+  }
+</style>

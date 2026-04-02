@@ -10,7 +10,7 @@
   import { onVisibilityChange } from '$lib/utils/visibility';
   import { saveBattleState, loadBattleState, clearBattleState } from '$lib/utils/local-storage';
   import { getBossSprite, type AnimationType } from '$lib/game/sprite-config';
-  import { updateStreak } from '$lib/game/streaks';
+  import { updateStreak, getDailyChallenge } from '$lib/game/streaks';
   import { checkAndUpdatePR } from '$lib/game/records';
   import CameraDetection from '$lib/components/CameraDetection.svelte';
   import SpriteAnimator from '$lib/components/SpriteAnimator.svelte';
@@ -361,6 +361,12 @@
 
     if (result === 'victory') {
       if (battle) updateBattleState();
+
+      // Mark daily challenge as completed if this battle matches
+      const dc = getDailyChallenge();
+      if (bossId === dc.bossId && exerciseType === dc.exerciseId) {
+        localStorage.setItem('pushquest_daily_completed', JSON.stringify({ date: new Date().toISOString().split('T')[0] }));
+      }
 
       // Check personal records
       const timeSecs = boss.timeLimitSecs - secsLeft;
