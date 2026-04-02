@@ -9,13 +9,14 @@
   import { EQUIPMENT_CATEGORIES, type ProgramGoal, type EquipmentCategory } from '$lib/data/types';
   import type { Program } from '$lib/data/types';
   import { setActiveProgram, setUserProfile } from '$lib/utils/session-storage';
+  import { computeStartingWeights, saveStartingWeights, type ExperienceLevel } from '$lib/game/starting-weights';
   import Stars from '$lib/components/Stars.svelte';
   import ProgramCard from '$lib/components/ProgramCard.svelte';
 
-  // Step management (0-7)
+  // Step management (0-8)
   let step = $state(0);
-  const totalSteps = 8;
-  const stepLabels = ['Sante', 'Camera', 'Pose', 'Reps', 'Objectif', 'Frequence', 'Equipement', 'Programme'];
+  const totalSteps = 9;
+  const stepLabels = ['Sante', 'Camera', 'Pose', 'Reps', 'Objectif', 'Frequence', 'Equipement', 'Experience', 'Programme'];
 
   // Camera state
   let videoEl: HTMLVideoElement | undefined = $state();
@@ -38,6 +39,14 @@
   let selectedGoal = $state<ProgramGoal | null>(null);
   let selectedDays = $state(3);
   let selectedEquipment = $state<EquipmentCategory>('full_gym');
+  let selectedExperience = $state<ExperienceLevel>('sometimes');
+
+  const experienceLevels: { id: ExperienceLevel; label: string; desc: string; emoji: string }[] = [
+    { id: 'never', label: 'Debutant complet', desc: 'Je n\'ai jamais touche une barre', emoji: '🌱' },
+    { id: 'sometimes', label: 'Quelques bases', desc: 'J\'ai deja fait de la muscu quelques fois', emoji: '💪' },
+    { id: 'regular', label: 'Regulier', desc: 'Je m\'entraine regulierement depuis 6+ mois', emoji: '🔥' },
+    { id: 'advanced', label: 'Avance', desc: 'Plus de 2 ans d\'entrainement serieux', emoji: '⚡' },
+  ];
 
   // Derived: recommended program
   const recommended = $derived<Program | undefined>(
@@ -172,6 +181,10 @@
         createdAt: new Date().toISOString(),
       });
     }
+
+    // Save starting weights based on experience
+    const weights = computeStartingWeights(selectedExperience);
+    saveStartingWeights(weights);
 
     // Save active program if recommended
     if (recommended) {
@@ -473,9 +486,54 @@
   {/if}
 
   <!-- ═══════════════════════════════════════════ -->
-  <!-- Step 7: Programme recommande               -->
+  <!-- Step 7: Experience                         -->
   <!-- ═══════════════════════════════════════════ -->
   {#if step === 7}
+    <div class="flex flex-col items-center text-center gap-5 w-full animate-fade-in">
+      <div class="text-4xl mb-1">🎓</div>
+      <h1 class="text-2xl font-black uppercase tracking-[3px]">Ton Experience</h1>
+      <p class="text-sm text-dim tracking-[1px]">Pour te proposer des poids de depart adaptes</p>
+
+      <div class="flex flex-col gap-2 w-full">
+        {#each experienceLevels as lvl, i}
+          <button
+            class="w-full relative backdrop-blur-sm border-l-4 rounded-lg transition-all duration-200 overflow-hidden -skew-x-[10deg]
+              {selectedExperience === lvl.id
+                ? 'bg-surface/90 border-primary border-y border-r border-white/10 shadow-[0_0_15px_rgba(230,57,70,0.2)]'
+                : 'bg-surface/60 border-white/15 border-y border-r border-white/[0.05] hover:border-primary/40 hover:bg-surface/80'}"
+            style="animation: slideInLeft 0.3s {0.04 * i}s ease-out both"
+            onclick={() => { selectedExperience = lvl.id; }}
+          >
+            {#if selectedExperience === lvl.id}
+              <div class="absolute inset-0 bg-[linear-gradient(rgba(230,57,70,0.04)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none"></div>
+            {/if}
+            <div class="skew-x-[10deg] flex items-center gap-3 px-4 py-3.5">
+              <span class="text-2xl">{lvl.emoji}</span>
+              <div class="text-left">
+                <span class="block font-black tracking-[2px] uppercase text-sm {selectedExperience === lvl.id ? 'text-white' : 'text-white/80'}">{lvl.label}</span>
+                <span class="text-[0.6rem] text-dim/60 font-mono tracking-[0.5px]">{lvl.desc}</span>
+              </div>
+              {#if selectedExperience === lvl.id}
+                <span class="ml-auto text-primary text-sm">✓</span>
+              {/if}
+            </div>
+          </button>
+        {/each}
+      </div>
+
+      <button
+        class="w-full py-4 bg-primary text-white font-black rounded-[14px] tracking-[4px] uppercase hover:bg-primary-hover active:scale-[0.98] transition-all"
+        onclick={nextStep}
+      >
+        CONTINUER
+      </button>
+    </div>
+  {/if}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Step 8: Programme recommande               -->
+  <!-- ═══════════════════════════════════════════ -->
+  {#if step === 8}
     <div class="flex flex-col items-center text-center gap-5 w-full animate-fade-in">
       <div class="text-5xl mb-2">⚔️</div>
       <h1 class="text-2xl font-black tracking-[3px] uppercase text-gold" style="text-shadow: 0 0 30px rgba(255,209,102,0.4)">
